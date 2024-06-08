@@ -7,7 +7,7 @@ Finally, it will say, "Ask a question." and go into listening mode again.
 
 To run:
 python3 main.py()
-Output on the command line looks like;
+While the program speaks and listens, output on the command line looks like;
 ```
 pygame 2.5.0 (SDL 2.28.0, Python 3.8.10)
 Hello from the pygame community. https://www.pygame.org/contribute.html
