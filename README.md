@@ -33,3 +33,69 @@ Friend:  As an AI assistant, I don't have personal opinions or beliefs. However,
 2. Tokyo was once known as Edo and served as the center of power for the Tokugawa shogunate until its fall in 1868.
 3. Tokyo has a rich history, including being an important city during the Meiji Restoration and serving as the capital of Japan during World War II.
 ```
+
+Change the speak function to change languages and voices.
+```
+def speak(text, lang='en', tld='co.uk'):
+```
+Here are some examples of the available voices and accents:
+```
+English (US) - Female voice (default)
+
+Language code: en
+TLD: com
+
+
+English (US) - Male voice
+
+Language code: en
+TLD: com.au
+
+
+English (UK) - Female voice
+
+Language code: en
+TLD: co.uk
+
+
+English (UK) - Male voice
+
+Language code: en
+TLD: co.uk (same as female voice)
+
+
+French - Female voice
+
+Language code: fr
+TLD: fr
+
+
+German - Female voice
+
+Language code: de
+TLD: de
+
+
+Spanish - Female voice
+
+Language code: es
+TLD: es
+
+
+Italian - Female voice
+
+Language code: it
+TLD: it
+
+
+Japanese - Female voice
+
+Language code: ja
+TLD: jp
+
+
+Korean - Female voice
+
+Language code: ko
+TLD: kr
+```
