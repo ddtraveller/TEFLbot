@@ -5,14 +5,14 @@ import pygame
 from gpt4all import GPT4All
 import re
 
-def speak(text, lang='en', tld='com'):
+def speak(text, lang='en', tld='co.uk'):
     """
     Convert text to speech and play the audio.
 
     Args:
         text (str): The text to be converted to speech.
         lang (str): The language code for the speech (default: 'en').
-        tld (str): The top-level domain for the Google Text-to-Speech API (default: 'com').
+        tld (str): The top-level domain for the Google Text-to-Speech API (default: 'co.uk').
     """
     # Replace apostrophes with empty strings
     text = text.replace("'", "")
@@ -74,11 +74,16 @@ model_path = "orca-mini-3b-gguf2-q4_0.gguf"
 # Create a GPT4All model instance
 model = GPT4All(model_path)
 
+# Flag to track if it's the first iteration of the conversation
+is_first_iteration = True
+
 # Start a chat session with the GPT4All model
 with model.chat_session():
     while True:
-        # Prompt the user to speak
-        speak("What would you like to talk about?")
+        if is_first_iteration:
+            # Prompt the user to speak only on the first iteration
+            speak("What would you like to talk about?", lang='en', tld='co.uk')
+            is_first_iteration = False
         
         # Listen for user input
         question = listen()
@@ -94,7 +99,8 @@ with model.chat_session():
             speak(response, lang='en', tld='co.uk')
         else:
             # Handle the case when no user input is detected
-            speak("Sorry, I didn't catch that. Please try again.")
+            speak("Sorry, I didn't catch that.", lang='en', tld='co.uk')
+            continue
 
     # Print the entire chat session history
     print(model.current_chat_session)
