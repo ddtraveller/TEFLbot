@@ -1,13 +1,13 @@
 # TEFLbot
 A python program that can perform conversational English that can be deployed on minimal hardware.
-
+<br/> 
 The current hello world implementation will say, "What would you like to have a conversation about?"
 Then it will go into a listening mode and then try to respond.
 Finally, it will say, "Ask a question." and go into listening mode again.
-
-To run:
-python3 main.py()
-While the program speaks and listens, output on the command line looks like;
+<br/> 
+To run:<br/> 
+python3 main.py()<br/> 
+While the program speaks and listens, output on the command line looks like;<br/> 
 ```
 pygame 2.5.0 (SDL 2.28.0, Python 3.8.10)
 Hello from the pygame community. https://www.pygame.org/contribute.html
@@ -33,12 +33,12 @@ Friend:  As an AI assistant, I don't have personal opinions or beliefs. However,
 2. Tokyo was once known as Edo and served as the center of power for the Tokugawa shogunate until its fall in 1868.
 3. Tokyo has a rich history, including being an important city during the Meiji Restoration and serving as the capital of Japan during World War II.
 ```
-
-Change the speak function to change languages and voices.
+<br/> 
+Change the speak function to change languages and voices.<br/> 
 ```
 def speak(text, lang='en', tld='co.uk'):
 ```
-Here are some examples of the available voices and accents:
+Here are some examples of the available voices and accents:<br/> 
 ```
 English (US) - Female voice (default)
 
