@@ -1,6 +1,3 @@
-Here is the corrected version with the git markdown formatted properly and printed in a code block:
-
-```markdown
 # TEFLbot
 ## Chatbot with GPT4All, Google Text-to-Speech, speech_recognition, and LangChain
 
@@ -123,5 +120,4 @@ TLD: jp
 Korean - Female voice
 Language code: ko
 TLD: kr
-```
 ```
