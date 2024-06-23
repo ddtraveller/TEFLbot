@@ -52,6 +52,95 @@ The `main_RAG.py` implementation looks through local files for files relevant to
 - `speech_recognition` (sr): This library can use online services for speech recognition. Specifically, when using `recognize_google()`, it sends audio data to Google's servers for processing.
 - `gtts` (Google Text-to-Speech): This library makes API calls to Google's servers to generate speech from text.
 
+Adjusting the response to weight local documents vs. the LLM.
+```
+If you want to further adjust the balance between using the context and the model's pre-existing knowledge, you can experiment with the following:
+
+Adjusting the top_k values in get_relevant_documents and vectorstore.similarity_search.
+Changing the chunk size and overlap in load_and_process_documents.
+Modifying the temperature in generate_response.
+Adjusting the threshold in the post-processing step.
+```
+
+# Library Descriptions
+
+## Standard Python Libraries
+
+- **os**: Provides a way of using operating system dependent functionality.
+- **sys**: Provides access to some variables used or maintained by the Python interpreter.
+- **gc**: Garbage Collector interface.
+- **time**: Time access and conversions.
+- **warnings**: Warning control.
+- **concurrent.futures**: Launching parallel tasks.
+- **io.BytesIO**: In-memory bytes buffer.
+
+## Third-party Libraries
+
+- **psutil**: Cross-platform library for retrieving information on running processes and system utilization.
+- **asyncio**: Asynchronous I/O, event loop, and coroutines.
+- **speech_recognition**: Library for performing speech recognition with support for several engines and APIs.
+- **gtts**: Google Text-to-Speech, a Python library and CLI tool to interface with Google Translate's text-to-speech API.
+- **pygame**: Set of Python modules designed for writing video games, useful here for audio playback.
+- **gpt4all**: Python bindings for the GPT4All chat interface.
+- **langchain**: Library for building applications with large language models.
+- **langchain_huggingface**: Hugging Face integration for LangChain.
+- **langchain_community.vectorstores**: Vector stores for LangChain from the community.
+- **chardet**: Universal encoding detector.
+- **sklearn**: Machine learning library for Python.
+- **numpy**: Fundamental package for scientific computing with Python.
+
+## Environment Variables
+
+- `CUDA_VISIBLE_DEVICES = '-1'`: Forces CPU usage instead of GPU.
+
+# Installation Guide
+
+This guide will walk you through the process of setting up the environment and installing all necessary libraries for the script.
+
+## Prerequisites
+
+- Python 3.8 or later
+- pip (Python package installer)
+
+## Step 1: Set up a virtual environment (optional but recommended)
+
+```bash
+python -m venv myenv
+source myenv/bin/activate  # On Windows, use: myenv\Scripts\activate
+```
+## Step 2: Install required libraries
+
+pip install psutil
+pip install SpeechRecognition
+pip install gTTS
+pip install pygame
+pip install gpt4all
+pip install langchain
+pip install chardet
+pip install scikit-learn
+pip install numpy
+pip install --upgrade langchain-community
+
+## Step 3: Install PyAudio (required for speech_recognition)
+On Windows:
+- bashCopypip install pyaudio
+On macOS:
+- bashCopybrew install portaudio
+- pip install pyaudio
+On Linux:
+- bashCopysudo apt-get install python3-pyaudio
+
+## Step 4: Install Hugging Face Transformers
+- bashCopypip install transformers
+
+## Step 5: Install FAISS (Facebook AI Similarity Search)
+- bashCopypip install faiss-cpu
+
+## Step 6: Download the GPT4All model
+- Download the orca-mini-3b-gguf2-q4_0.gguf model from the GPT4All website and place it in your project directory.
+
+
+
 The `main_offline_only.py` implementation runs entirely offline. The impact on performance can vary, but here's a general breakdown of what you might expect:
 
 **Speech Recognition:**

@@ -22,15 +22,6 @@ import sklearn.feature_extraction.text
 import sklearn.metrics.pairwise
 import numpy as np
 
-"""
-If you want to further adjust the balance between using the context and the model's pre-existing knowledge, you can experiment with the following:
-
-Adjusting the top_k values in get_relevant_documents and vectorstore.similarity_search.
-Changing the chunk size and overlap in load_and_process_documents.
-Modifying the temperature in generate_response.
-Adjusting the threshold in the post-processing step.
-"""
-
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Create a ThreadPoolExecutor
