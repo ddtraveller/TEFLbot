@@ -52,15 +52,112 @@ The `main_RAG.py` implementation looks through local files for files relevant to
 - `speech_recognition` (sr): This library can use online services for speech recognition. Specifically, when using `recognize_google()`, it sends audio data to Google's servers for processing.
 - `gtts` (Google Text-to-Speech): This library makes API calls to Google's servers to generate speech from text.
 
-Adjusting the response to weight local documents vs. the LLM.
-```
-If you want to further adjust the balance between using the context and the model's pre-existing knowledge, you can experiment with the following:
+# Guide to Tuning the AI Assistant Program - main_RAG.py
 
-Adjusting the top_k values in get_relevant_documents and vectorstore.similarity_search.
-Changing the chunk size and overlap in load_and_process_documents.
-Modifying the temperature in generate_response.
-Adjusting the threshold in the post-processing step.
+This guide will help you fine-tune the AI assistant program to achieve the desired balance between using the context from documents and the model's pre-existing knowledge.
+
+## 1. Adjusting Relevant Document Selection
+
+### Function: `get_relevant_documents(query, doc_list, top_k=5)`
+
+The `top_k` parameter determines how many relevant documents are selected based on the query.
+
+- **Increasing `top_k`**: 
+  - Pro: Provides more context, potentially capturing more relevant information.
+  - Con: May introduce noise and irrelevant information, increasing processing time.
+- **Decreasing `top_k`**: 
+  - Pro: Focuses on the most relevant documents, reducing noise.
+  - Con: Might miss important information if it's spread across many documents.
+
+Experiment with values between 3 and 10, depending on your document collection's size and diversity.
+
+### Function: `vectorstore.similarity_search(question, k=3)`
+
+This `k` value determines how many text chunks are retrieved from the vector store for context.
+
+- **Increasing `k`**: 
+  - Pro: Provides more detailed context.
+  - Con: May introduce irrelevant information and increase token usage.
+- **Decreasing `k`**: 
+  - Pro: Focuses on the most relevant information.
+  - Con: Might miss important details.
+
+Try values between 1 and 5, balancing detail with relevance.
+
+## 2. Adjusting Document Processing
+
+### Function: `load_and_process_documents(file_paths, chunk_size=300, chunk_overlap=50)`
+
+- **chunk_size**: Determines the length of text segments.
+  - Increasing: Provides more context in each chunk but may reduce granularity.
+  - Decreasing: Allows for more specific matching but may lose context.
+
+- **chunk_overlap**: Controls how much text overlaps between chunks.
+  - Increasing: Ensures context continuity but increases redundancy.
+  - Decreasing: Reduces redundancy but may lose context between chunks.
+
+Experiment with chunk sizes between 200 and 500, and overlaps between 20 and 100.
+
+## 3. Modifying Model Temperature
+
+### Function: `generate_response(model, prompt, max_tokens=2000, continuation_attempts=3, temperature=0.3)`
+
+The `temperature` parameter controls the randomness of the model's output.
+
+- **Increasing temperature** (e.g., 0.5-0.8): 
+  - Pro: More creative and diverse responses.
+  - Con: May stray from the given context.
+- **Decreasing temperature** (e.g., 0.1-0.3): 
+  - Pro: More focused and deterministic responses.
+  - Con: May become repetitive or too constrained.
+
+Adjust between 0.1 and 0.8, depending on how creative vs. deterministic you want the responses to be.
+
+## 4. Post-processing Threshold
+
+### In the `process_question` function:
+
+```python
+if overlap < 5:  # Arbitrary threshold, adjust as needed
+    response += "\n\nNote: This response may not be entirely based on the provided context. Please verify the information."
 ```
+This threshold checks how many words from the context appear in the response.
+
+- **Increasing the threshold**:
+    - Pro: Ensures responses are more closely tied to the context.
+    - Con: May flag accurate responses that use different wording.
+- **Decreasing the threshold**:
+    - Pro: Allows for more flexibility in response wording.
+    - Con: May not catch responses that stray from the context.
+Experiment with values between 3 and 10, depending on your desired strictness.
+
+## 5. Prompt Engineering
+The current prompt is:
+```enriched_prompt = f"""You are an AI assistant. Your primary task is to answer the question using ONLY the information provided in the following context. If the context doesn't contain enough information to fully answer the question, say so, but try to provide as much relevant information as possible from the context.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer based ONLY on the above context:
+```
+# Prompt Components:
+1. **Role Definition**: "You are an AI assistant."
+2. **Task Instruction**: "Your primary task is to answer the question using ONLY the information provided in the following context."
+3. **Handling Insufficient Information**: "If the context doesn't contain enough information to fully answer the question, say so, but try to provide as much relevant information as possible from the context."
+4. **Context Presentation**: The relevant text is provided under "Context:"
+5. **Question Presentation**: The user's question is clearly labeled.
+6. **Final Instruction**: "Answer based ONLY on the above context:"
+
+# Tuning the Prompt:
+* **Specificity**: You can make the prompt more specific to your use case. For example, if it's for a medical assistant, you might add: "You are a medical AI assistant. Provide information based on scientific facts from the context."
+* **Output Format**: You can specify a desired output format. For example: "Structure your answer in bullet points for clarity."
+* **Encouraging Elaboration**: If you want more detailed answers, you might add: "Explain your reasoning and provide examples from the context if applicable."
+* **Discouraging Speculation**: To further prevent the model from using its pre-existing knowledge, you could add: "Do not speculate or provide information beyond what is given in the context."
+* **Handling Ambiguity**: You might add instructions for handling unclear questions: "If the question is ambiguous, explain the possible interpretations before answering."
+
+Remember, prompt engineering is an iterative process. Test different prompts and observe how they affect the AI's responses in terms of relevance, accuracy, and adherence to the given context.
 
 # Library Descriptions
 
