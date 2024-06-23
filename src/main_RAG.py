@@ -22,6 +22,15 @@ import sklearn.feature_extraction.text
 import sklearn.metrics.pairwise
 import numpy as np
 
+"""
+If you want to further adjust the balance between using the context and the model's pre-existing knowledge, you can experiment with the following:
+
+Adjusting the top_k values in get_relevant_documents and vectorstore.similarity_search.
+Changing the chunk size and overlap in load_and_process_documents.
+Modifying the temperature in generate_response.
+Adjusting the threshold in the post-processing step.
+"""
+
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Create a ThreadPoolExecutor
@@ -148,6 +157,59 @@ async def load_and_process_documents(file_paths, chunk_size=200, chunk_overlap=2
     gc.collect()
     
     return chunks
+
+async def process_question(question, model, embeddings, all_docs):
+    relevant_docs = await get_relevant_documents(question, all_docs, top_k=5)
+    print(f"Found {len(relevant_docs)} relevant documents.")
+    
+    texts = await load_and_process_documents(relevant_docs, chunk_size=300, chunk_overlap=50)
+    print(f"Processed {len(texts)} text chunks.")
+    
+    if not texts:
+        print("No text could be processed from the relevant documents. Using only the question for the response.")
+        context = ""
+    else:
+        vectorstore = langchain_community.vectorstores.FAISS.from_texts(texts, embeddings)
+        context_docs = vectorstore.similarity_search(question, k=3)  # Increased from 1 to 3
+        context = "\n".join([doc.page_content for doc in context_docs])
+    
+    enriched_prompt = f"""You are an AI assistant. Your primary task is to answer the question using ONLY the information provided in the following context. If the context doesn't contain enough information to fully answer the question, say so, but try to provide as much relevant information as possible from the context.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer based ONLY on the above context:"""
+
+    response = generate_response(model, enriched_prompt, temperature=0.3)  # Lowered temperature
+    
+    # Post-processing to verify response
+    if context:
+        context_words = set(context.lower().split())
+        response_words = set(response.lower().split())
+        overlap = len(context_words.intersection(response_words))
+        if overlap < 5:  # Arbitrary threshold, adjust as needed
+            response += "\n\nNote: This response may not be entirely based on the provided context. Please verify the information."
+    
+    del relevant_docs, texts, vectorstore, context, enriched_prompt
+    memory_cleanup()
+    
+    return response
+
+def generate_response(model, prompt, max_tokens=2000, continuation_attempts=3, temperature=0.3):
+    full_response = ""
+    for _ in range(continuation_attempts):
+        with model.chat_session():
+            response = model.generate(prompt=prompt, temp=temperature, max_tokens=max_tokens)
+        full_response += response
+        
+        if response.strip().endswith(('.', '!', '?')):
+            break
+        else:
+            prompt = f"{prompt}\n{response}\nPlease continue:"
+    
+    return full_response
 
 def initialize_gpt4all(model_path):
     print("Loading GPT4All model...")
