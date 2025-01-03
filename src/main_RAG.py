@@ -60,27 +60,31 @@ def initialize_recognizer():
     return sr.Recognizer()
 
 def listen(recognizer, timeout=10):
-    with sr.Microphone() as source:
-        print("Listening...")
-        try:
-            audio = recognizer.listen(source, timeout=timeout)
-        except sr.WaitTimeoutError:
-            print("Listening timed out. No speech detected.")
-            return None
-    
     try:
-        print("Recognizing...")
-        query = recognizer.recognize_google(audio, language='en-in')
-        print(f"You: {query}\n")
-        return query
-    except sr.UnknownValueError:
-        print("Sorry, I couldn't understand that.")
-        return None
-    except sr.RequestError as e:
-        print(f"Could not request results from Google Speech Recognition service; {e}")
-        return None
+        with sr.Microphone() as source:
+            # Adjust for ambient noise
+            print("Adjusting for ambient noise...")
+            recognizer.adjust_for_ambient_noise(source, duration=1)
+            print("Listening...")
+            try:
+                audio = recognizer.listen(source, timeout=timeout)
+            except sr.WaitTimeoutError:
+                print("Listening timed out. No speech detected.")
+                return None
+        
+        try:
+            print("Recognizing...")
+            query = recognizer.recognize_google(audio, language='en-in')
+            print(f"You: {query}\n")
+            return query
+        except sr.UnknownValueError:
+            print("Sorry, I couldn't understand that.")
+            return None
+        except sr.RequestError as e:
+            print(f"Could not request results from Google Speech Recognition service; {e}")
+            return None
     except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
+        print(f"Microphone error: {str(e)}")
         return None
 
 async def async_read_file_content(file_path):
@@ -177,32 +181,30 @@ def memory_cleanup():
     gc.collect()
 
 async def process_question(question, model, embeddings, all_docs):
-    relevant_docs = await get_relevant_documents(question, all_docs, top_k=7)
-    print(f"Found {len(relevant_docs)} relevant documents.")
+    context = ""
+    if all_docs:
+        try:
+            relevant_docs = await get_relevant_documents(question, all_docs, top_k=7)
+            texts = await load_and_process_documents(relevant_docs, chunk_size=200, chunk_overlap=20)
+            
+            if texts:
+                vectorstore = langchain_community.vectorstores.FAISS.from_texts(texts, embeddings)
+                context_docs = vectorstore.similarity_search(question, k=1)
+                context = "\n".join([doc.page_content for doc in context_docs])
+                del vectorstore, texts
+        except Exception as e:
+            print(f"Error processing documents: {e}")
     
-    texts = await load_and_process_documents(relevant_docs, chunk_size=200, chunk_overlap=20)
-    print(f"Processed {len(texts)} text chunks.")
+    prompt = f"You are an AI assistant. Answer the following question:\n\nQuestion: {question}"
+    if context:
+        prompt = f"You are an AI assistant. Use this context to answer the question:\n\nContext:\n{context}\n\nQuestion: {question}"
     
-    if not texts:
-        print("No text could be processed from the relevant documents. Using only the question for the response.")
-        context = ""
-    else:
-        vectorstore = langchain_community.vectorstores.FAISS.from_texts(texts, embeddings)
-        context_docs = vectorstore.similarity_search(question, k=1)
-        context = "\n".join([doc.page_content for doc in context_docs])
-    
-    enriched_prompt = f"You are an AI assistant. Use the following context to answer the question:\n\nContext:\n{context}\n\nQuestion: {question}\nAnswer:"
-    response = generate_response(model, enriched_prompt)
-    
-    del relevant_docs, texts, vectorstore, context, enriched_prompt
+    response = generate_response(model, prompt)
     memory_cleanup()
-    
     return response
 
 async def main():
     print("Starting script...")
-    
-    # Initial setup
     recognizer, model, embeddings = reinitialize_components()
 
     print("Select a role for the AI assistant:")
@@ -214,80 +216,60 @@ async def main():
 
     role = input("Enter the number of your choice (or press Enter for General): ")
 
-    if role == "1":
-        role_name = "Holistic Healing"
-        doc_path = "./TEFLTools/Readings/Holistic_Healing_Arts_and_Practices"
-    elif role == "2":
-        role_name = "Medical Herbalism"
-        doc_path = "./TEFLTools/Readings/Medical_Herbalism"
-    elif role == "3":
-        role_name = "Permaculture"
-        doc_path = "./TEFLTools/Readings/Regenerative_Living"
-    elif role == "4":
-        role_name = "Software"
-        doc_path = "./TEFLTools/Readings/Software_for_Timor_Leste"
-    else:
-        role_name = "General Topics"
-        doc_path = "./TEFLTools"
+    base_path = os.path.abspath("TEFLTools")
+    role_paths = {
+        "1": ("Holistic Healing", os.path.join(base_path, "Readings", "Holistic_Healing_Arts_and_Practices")),
+        "2": ("Medical Herbalism", os.path.join(base_path, "Readings", "Medical_Herbalism")),
+        "3": ("Permaculture", os.path.join(base_path, "Readings", "Regenerative_Living")),
+        "4": ("Software", os.path.join(base_path, "Readings", "Software_for_Timor_Leste")),
+        "5": ("General Topics", base_path)
+    }
 
+    role_name, doc_path = role_paths.get(role, role_paths["5"])
     print(f"Selected role: {role_name}")
 
-    print(f"Scanning for documents in {doc_path} folder...")
     all_docs = []
-    for root, _, files in os.walk(doc_path):
-        for file in files:
-            if file.endswith(".txt") and "license" not in file.lower():
-                all_docs.append(os.path.join(root, file))
-    print(f"Found {len(all_docs)} documents in {role_name} folder.")
+    if os.path.exists(doc_path):
+        print(f"Scanning for documents in {doc_path}...")
+        for root, _, files in os.walk(doc_path):
+            for file in files:
+                if file.endswith((".txt", ".md", ".pdf")) and "license" not in file.lower():
+                    full_path = os.path.join(root, file)
+                    if os.path.exists(full_path):
+                        all_docs.append(full_path)
+        print(f"Found {len(all_docs)} documents.")
+    else:
+        print("No document directory found. Continuing without documents.")
 
     is_first_iteration = True
-    question_count = 0
-
-    print("Starting chat session...")
-    
     while True:
         try:
             if is_first_iteration:
                 speak(f"What would you like to talk about regarding {role_name}?", lang='en', tld='co.uk')
                 is_first_iteration = False
             else:
-                print("Reinitializing components...")
                 recognizer, model, embeddings = reinitialize_components()
-                print("Reinitialization complete.")
             
             log_memory_usage()
-            
-            print("Listening for input...")
             question = listen(recognizer, timeout=10)
             
             if question:
-                print(f"Received question: {question}")
-                question_count += 1
-                
                 response = await process_question(question, model, embeddings, all_docs)
-                
-                print("Friend:", response)
+                print("Assistant:", response)
                 speak(response, lang='en', tld='co.uk', chunk_size=600)
-
                 del response
-                gc.collect()
             else:
-                speak("I'm sorry, I didn't catch that. Could you please repeat your question?", lang='en', tld='co.uk')
+                speak("I didn't catch that. Could you repeat?", lang='en', tld='co.uk')
 
+            gc.collect()
             time.sleep(0.1)
+
         except Exception as e:
-            error_message = f"An error occurred: {str(e)}\n"
-            error_message += f"Error type: {type(e).__name__}\n"
-            error_message += f"Error details: {str(e)}\n"
-            error_message += f"Error occurred in: {e.__traceback__.tb_frame.f_code.co_filename}, line {e.__traceback__.tb_lineno}"
-            print(error_message)
-            speak("I'm sorry, but I encountered an error. Let me restart and try again.", lang='en', tld='co.uk')
+            print(f"Error: {str(e)}")
+            speak("I encountered an error. Let me restart.", lang='en', tld='co.uk')
 
-        log_memory_usage()
-
-        # Check if memory usage is too high and restart if necessary
         if psutil.virtual_memory().percent > 80:
-            print("Memory usage is too high. Restarting the script...")
+            print("High memory usage. Restarting...")
             python = sys.executable
             os.execl(python, python, *sys.argv)
 
